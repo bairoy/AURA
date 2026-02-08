@@ -3,6 +3,8 @@ from src.utils import merge_async_iters
 from src.events import VoiceAgentEvent
 from src.assemblyai_stt import AssemblyAISTT
 import asyncio
+import contextlib
+
 
 
 async def stt_stream(
