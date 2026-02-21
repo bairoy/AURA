@@ -30,11 +30,13 @@
 #       yield event
 #   finally:
 #     await tts.close()
+
+# from src.openai_tts import OpenAITTS as CartesiaTTS
 from typing import AsyncIterator
 from src.events import VoiceAgentEvent
-# from src.cartesia_tts import CartesiaTTS
+from src.cartesia_tts import CartesiaTTS
 from src.utils import merge_async_iters
-from src.openai_tts import OpenAITTS as CartesiaTTS
+
 
 
 async def tts_stream(
