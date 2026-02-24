@@ -11,8 +11,20 @@ from fastapi.staticfiles import StaticFiles
 from src.websocket.handler import handle_websocket
 
 
+from contextlib import asynccontextmanager
+from src.core.agent import get_agent_with_checkpointer
 
-app = FastAPI()
+
+
+
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    print("🚀 Pre-initializing agent and checkpointer...")
+    await get_agent_with_checkpointer()
+    print("✅ Agent ready. Server accepting connections.")
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,7 +32,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
