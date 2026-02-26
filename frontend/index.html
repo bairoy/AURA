@@ -1,4 +1,4 @@
-<!doctype html>
+<!-- <!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -28,6 +28,228 @@
     <button id="stop">Stop</button>
 
     <pre id="log"></pre>
+
+    <script src="main.js"></script>
+  </body>
+</html> -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Aura Voice Agent</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        background: #151414;
+        color: #fff;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* ── Screens ── */
+      .screen {
+        display: none;
+        width: 100%;
+        max-width: 420px;
+        padding: 20px;
+      }
+      .screen.active {
+        display: block;
+      }
+
+      h2 {
+        margin-bottom: 20px;
+        font-size: 1.6rem;
+        color: #0f0;
+      }
+      h3 {
+        margin-bottom: 16px;
+        font-size: 1.2rem;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 12px;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 1rem;
+      }
+
+      button {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        margin-right: 8px;
+        margin-bottom: 8px;
+      }
+
+      .btn-primary {
+        background: #0f0;
+        color: #000;
+        font-weight: bold;
+      }
+      .btn-secondary {
+        background: #333;
+        color: #fff;
+      }
+      .btn-danger {
+        background: #c00;
+        color: #fff;
+      }
+      .btn-full {
+        width: 100%;
+      }
+
+      .error {
+        color: #f55;
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+      }
+      .link {
+        color: #0f0;
+        cursor: pointer;
+        text-decoration: underline;
+        font-size: 0.9rem;
+      }
+
+      /* ── Thread list ── */
+      .thread-list {
+        margin: 12px 0;
+        max-height: 220px;
+        overflow-y: auto;
+      }
+      .thread-item {
+        padding: 10px 14px;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: border-color 0.2s;
+      }
+      .thread-item:hover {
+        border-color: #0f0;
+      }
+      .thread-item .label {
+        font-weight: bold;
+      }
+      .thread-item .date {
+        font-size: 0.8rem;
+        color: #888;
+        margin-top: 4px;
+      }
+
+      /* ── Agent screen ── */
+      #agent-screen {
+        max-width: 600px;
+      }
+
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .user-info {
+        font-size: 0.9rem;
+        color: #888;
+      }
+
+      pre#log {
+        background: #111;
+        color: #0f0;
+        padding: 12px;
+        height: 280px;
+        overflow-y: auto;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        font-size: 0.85rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── Login Screen ─────────────────────────────────────────────────── -->
+    <div id="login-screen" class="screen active">
+      <h2>🎙 Aura</h2>
+      <div id="login-error" class="error"></div>
+      <input type="text" id="login-username" placeholder="Username" />
+      <input type="password" id="login-password" placeholder="Password" />
+      <button class="btn-primary btn-full" id="login-btn">Login</button>
+      <p style="margin-top: 12px; font-size: 0.9rem">
+        No account? <span class="link" id="go-register">Register</span>
+      </p>
+    </div>
+
+    <!-- ── Register Screen ──────────────────────────────────────────────── -->
+    <div id="register-screen" class="screen">
+      <h2>🎙 Create Account</h2>
+      <div id="register-error" class="error"></div>
+      <input type="text" id="reg-username" placeholder="Username" />
+      <input
+        type="password"
+        id="reg-password"
+        placeholder="Password (min 6 chars)"
+      />
+      <button class="btn-primary btn-full" id="register-btn">Register</button>
+      <p style="margin-top: 12px; font-size: 0.9rem">
+        Already have an account? <span class="link" id="go-login">Login</span>
+      </p>
+    </div>
+
+    <!-- ── Thread Select Screen ─────────────────────────────────────────── -->
+    <div id="thread-screen" class="screen">
+      <h2>🎙 Aura</h2>
+      <h3>Start a conversation</h3>
+      <button class="btn-primary btn-full" id="new-thread-btn">
+        ➕ New Conversation
+      </button>
+
+      <div id="thread-list-container" style="display: none; margin-top: 20px">
+        <h3>Or continue a previous one:</h3>
+        <div id="thread-list" class="thread-list"></div>
+      </div>
+
+      <p style="margin-top: 16px">
+        <span class="link" id="logout-btn">Logout</span>
+      </p>
+    </div>
+
+    <!-- ── Agent Screen ──────────────────────────────────────────────────── -->
+    <div id="agent-screen" class="screen">
+      <div class="top-bar">
+        <h2>🎙 Aura</h2>
+        <div class="user-info">
+          <span id="user-label"></span> &nbsp;
+          <span class="link" id="back-btn">← Back</span>
+        </div>
+      </div>
+
+      <pre id="log"></pre>
+
+      <div class="controls">
+        <button class="btn-primary" id="start">Start</button>
+        <button class="btn-danger" id="stop">Stop</button>
+      </div>
+    </div>
 
     <script src="main.js"></script>
   </body>
