@@ -35,6 +35,7 @@ class AssemblyAISTT:
     # ----------------------------
 
     async def receive_events(self) -> AsyncIterator[STTEvent]:
+        buffer=""
 
         while not self._close_signal.is_set():
 
@@ -68,15 +69,20 @@ class AssemblyAISTT:
                         if msg_type == "Begin":
                             continue
 
+                       
+
                         elif msg_type == "Turn":
                             transcript = message.get("transcript", "")
-                            is_formatted = message.get("turn_is_formatted", False)
+                            end_of_turn = message.get("end_of_turn", False)
 
-                            if is_formatted:
-                                if transcript:
-                                    yield STTOutputEvent.create(transcript)
-                            else:
-                                yield STTChunkEvent.create(transcript)
+                            if transcript:
+                                buffer += " " + transcript
+
+                            # Only emit when full sentence is complete
+                            if end_of_turn and buffer.strip():
+                                final_text = buffer.strip()
+                                buffer = ""
+                                yield STTOutputEvent.create(final_text)
 
                         elif msg_type == "Termination":
                             break
@@ -127,10 +133,15 @@ class AssemblyAISTT:
             return self._ws
 
         
+        # params = urlencode({
+        #     "sample_rate":self.sample_rate,
+        #     "format_turns":str(self.format_turns).lower(),
+        # })
         params = urlencode({
-            "sample_rate":self.sample_rate,
-            "format_turns":str(self.format_turns).lower(),
-        })
+    "sample_rate": self.sample_rate,
+    "format_turns": "true",
+    "end_of_turn_confidence_threshold": 0.7,
+    })
 
         url = f"wss://streaming.assemblyai.com/v3/ws?{params}"
 
@@ -146,3 +157,83 @@ class AssemblyAISTT:
         self._connection_signal.set()
 
         return self._ws
+
+# import asyncio
+# import contextlib
+# import json
+# import os
+# import base64
+# from typing import AsyncIterator, Optional
+# from urllib.parse import urlencode
+
+# import websockets
+# from websockets.client import WebSocketClientProtocol
+
+# from src.events import STTChunkEvent, STTEvent, STTOutputEvent
+
+
+# class AssemblyAISTT:
+#     ...
+#     async def receive_events(self) -> AsyncIterator[STTEvent]:
+#         turn_buffer = ""
+
+#         while not self._close_signal.is_set():
+#             ...
+#             try:
+#                 async for raw_message in self._ws:
+#                     try:
+#                         message = json.loads(raw_message)
+#                         msg_type = message.get("type")
+
+#                         if msg_type == "Begin":
+#                             continue
+
+#                         elif msg_type == "Turn":
+#                             transcript = message.get("transcript", "").strip()
+#                             is_formatted = message.get("turn_is_formatted", False)
+#                             end_of_turn = message.get("turn_is_final", False) or message.get("end_of_turn", False)
+
+#                             if transcript:
+#                                 turn_buffer = (turn_buffer + " " + transcript).strip()
+
+#                             if end_of_turn:
+#                                 if turn_buffer:
+#                                     yield STTOutputEvent.create(turn_buffer)
+#                                 turn_buffer = ""
+#                             else:
+#                                 if not is_formatted and transcript:
+#                                     yield STTChunkEvent.create(transcript)
+
+#                         elif msg_type == "Termination":
+#                             if turn_buffer:
+#                                 yield STTOutputEvent.create(turn_buffer)
+#                                 turn_buffer = ""
+#                             break
+
+#                         elif "error" in message:
+#                             print("AssemblyAI error:", message["error"])
+#                             break
+
+#                     except json.JSONDecodeError:
+#                         continue
+
+#             except websockets.exceptions.ConnectionClosed:
+#                 print("AssemblyAISTT: WebSocket connection closed")
+
+#     ...
+#     async def _ensure_connection(self) -> WebSocketClientProtocol:
+#         ...
+#         params = urlencode({
+#             "sample_rate": self.sample_rate,
+#             "format_turns": str(self.format_turns).lower(),
+#             "end_of_turn_confidence_threshold": "0.7",
+#         })
+
+#         url = f"wss://streaming.assemblyai.com/v3/ws?{params}"
+
+#         self._ws = await websockets.connect(
+#             url,
+#             additional_headers={"Authorization": self.api_key},
+#         )
+#         self._connection_signal.set()
+#         return self._ws

@@ -240,6 +240,8 @@ class CartesiaTTS:
         self._ws = None 
         self._connection_signal = asyncio.Event()
         self._close_signal = asyncio.Event()
+        self._done_event = asyncio.Event()
+        self._done_event.set()
         self._context_counter = 0
 
     def _generate_context_id(self) -> str:
@@ -254,6 +256,9 @@ class CartesiaTTS:
         if not text.strip():
             return 
         
+        await self._done_event.wait()
+        self._done_event.clear()
+
         ws = await self._ensure_connection()
 
         payload = {
@@ -305,10 +310,12 @@ class CartesiaTTS:
                             # Handle completion
                             if message.get("done"):
                                 print("[CARTESIA] Stream done")
+                                self._done_event.set()
                             
                             # Handle errors
                             if "error" in message and message["error"]:
                                 print(f"[CARTESIA] Error: {message['error']}")
+                                self._done_event.set()
                                 
                         except json.JSONDecodeError as e:
                             print(f"[CARTESIA] JSON decode error: {e}")
@@ -316,11 +323,13 @@ class CartesiaTTS:
                             
                 except websockets.exceptions.ConnectionClosed as e:
                     print(f"[CARTESIA] WebSocket closed: {e}")
+                    self._done_event.set()
                     self._ws = None
                 except Exception as e:
                     print(f"[CARTESIA] Unexpected error: {e}")
                     import traceback
                     traceback.print_exc()  # FIXED: was print_exv()
+                    self._done_event.set()
                     self._ws = None
             else:
                 # Wait a bit before checking again
@@ -332,6 +341,7 @@ class CartesiaTTS:
         if self._ws and self._ws.close_code is None:
             await self._ws.close()
         self._ws = None
+        self._done_event.set()
         self._close_signal.set()
 
     async def _ensure_connection(self) -> WebSocketClientProtocol:

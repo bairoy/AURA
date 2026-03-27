@@ -33,15 +33,6 @@ async def tts_stream(
                 if event.text.strip().endswith((".", "!", "?")):
                     text = "".join(buffer).strip()
                     if text:
-                        # Dynamic delay based on previous sentence length
-                        # Estimate: ~150 words per minute speech = 2.5 words/sec = 0.4s per word
-                        if last_sentence_length > 0:
-                            word_count = len(text.split())
-                            # Estimate time to speak previous sentence (rough estimate)
-                            delay = min(last_sentence_length * 0.05, 2.0)  # Max 2 seconds
-                            print(f"[PIPELINE] Waiting {delay:.1f}s for previous sentence to finish...")
-                            await asyncio.sleep(delay)
-                        
                         print(f"[PIPELINE] SENDING TO TTS: '{text[:50]}...' ({len(text)} chars)")
                         await tts.send_text(text)
                         last_sentence_length = len(text)  # Track for next time
@@ -50,9 +41,6 @@ async def tts_stream(
             if event.type == "agent_end" and buffer:
                 text = "".join(buffer).strip()
                 if text:
-                    if last_sentence_length > 0:
-                        delay = min(last_sentence_length * 0.05, 2.0)
-                        await asyncio.sleep(delay)
                     print(f"[PIPELINE] FINAL SEND TO TTS: '{text}'")
                     await tts.send_text(text)
                 buffer = []
